@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+        "golang.org/x/net/proxy"
 	"github.com/emersion/go-sasl"
 )
 
@@ -55,15 +55,24 @@ type Client struct {
 var defaultTimeout = 30 * time.Second
 
 // Dial returns a new Client connected to an SMTP server at addr.
-// The addr must include a port, as in "mail.example.com:smtp".
+// routes traffic over socks5 instead of original repo.
+
+
 func Dial(addr string) (*Client, error) {
-	conn, err := net.DialTimeout("tcp", addr, defaultTimeout)
-	if err != nil {
-		return nil, err
-	}
-	host, _, _ := net.SplitHostPort(addr)
-	return NewClient(conn, host)
+    // Use a SOCKS5 proxy running on localhost:1080
+    dialer, err := proxy.SOCKS5("tcp", "localhost:1080", nil, proxy.Direct)
+    if err != nil {
+        return nil, err
+    }
+
+    conn, err := dialer.Dial("tcp", addr)
+    if err != nil {
+        return nil, err
+    }
+
+    return NewClient(conn, addr)
 }
+
 
 // DialTLS returns a new Client connected to an SMTP server via TLS at addr.
 // The addr must include a port, as in "mail.example.com:smtps".
